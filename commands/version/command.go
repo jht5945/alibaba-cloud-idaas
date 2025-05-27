@@ -2,8 +2,13 @@ package version
 
 import (
 	"fmt"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/constants"
 	"github.com/urfave/cli/v2"
+)
+
+var (
+	Version string = "none"
 )
 
 func BuildCommand() *cli.Command {
@@ -19,6 +24,14 @@ func BuildCommand() *cli.Command {
 }
 
 func version() error {
-	fmt.Printf("Version: %s\n", constants.AlibabaCloudIdaasCliVersion)
+	fmt.Printf("Version: %s\n", GetVersion())
 	return nil
+}
+
+func GetVersion() string {
+	if Version == "" || Version == "none" {
+		return constants.AlibabaCloudIdaasCliVersion
+	} else {
+		return Version
+	}
 }
