@@ -1,8 +1,10 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/clean_cache"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/execute"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/fetch_token"
@@ -17,14 +19,6 @@ import (
 	"github.com/aliyunidaas/alibaba-cloud-idaas/signer/yubikey_piv"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"github.com/urfave/cli/v2"
-	"os"
-	"strings"
-)
-
-var (
-	// go build -ldflags "-X main.commitHash=$(git rev-parse HEAD) -X main.gitStatus=$(git status -b|base64)"
-	commitHash string = "none"
-	gitStatus  string = "none"
 )
 
 func main() {
@@ -73,7 +67,7 @@ func printBanner() {
 		"    +#+      +#+    +:+  +#++:++#++:  +#++:++#++:  +#++:++#++ \n" +
 		"    +#+      +#+    +#+  +#+     +#+  +#+     +#+         +#+ \n" +
 		"    #+#      #+#    #+#  #+#     #+#  #+#     #+#  #+#    #+# \n" +
-		"###########  #########   ###     ###  ###     ###   ########   v" + constants.AlibabaCloudIdaasCliVersion
+		"###########  #########   ###     ###  ###     ###   ########   v" + version.GetVersion()
 	println(logoAndVersion)
 
 	println()
@@ -107,14 +101,6 @@ func printConfigFileAndFeatures() {
 func printVerbose(context *cli.Context) {
 	if len(context.Args().Slice()) == 1 && context.Args().Slice()[0] == "verbose" {
 		println()
-		fmt.Printf("Commit hash: %s\n", commitHash)
-		// gitStatus set at compile time
-		gitStatusBytes, err := base64.StdEncoding.DecodeString(gitStatus)
-		if gitStatus == "none" || err != nil {
-			fmt.Printf("Git status: %s\n", gitStatus)
-		} else {
-			fmt.Printf("Git status: >>%s<<\n", strings.TrimSpace(string(gitStatusBytes)))
-		}
 
 		fmt.Printf("\nSupported environment variables:\n")
 		fmt.Printf(" - %s  User agent when send OIDC/OAuth related requests\n", padEnv(constants.EnvUserAgent))
