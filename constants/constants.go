@@ -1,7 +1,7 @@
 package constants
 
 const (
-	AlibabaCloudIdaasCliVersion = "0.1.0-preview1"
+	AlibabaCloudIdaasCliVersion = "0.1.0-preview2"
 
 	DotAliyunDir         = ".aliyun"
 	AlibabaCloudIdaasDir = "alibaba-cloud-idaas"

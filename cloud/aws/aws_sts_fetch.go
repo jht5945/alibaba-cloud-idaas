@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/cloud_common"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/constants"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
@@ -141,7 +142,7 @@ func assumeRoleWithWebIdentity(client *sts.Client, oidcToken string, options *Fe
 	if options.RoleSessionName != "" {
 		roleSessionName = options.RoleSessionName
 	} else {
-		roleSessionName = fmt.Sprintf("idaas-assumed-role-%d", time.Now().UnixMilli())
+		roleSessionName = cloud_common.GenerateRoleSessionName(oidcToken)
 		idaaslog.Info.PrintfLn(
 			"Assume role session name not specified, use role session name %s", roleSessionName)
 	}

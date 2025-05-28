@@ -70,7 +70,7 @@ func fetchJwt(oidcTokenProviderConfig *config.OidcTokenProviderConfig, options *
 }
 
 func isContentExpiringOrExpired(s *utils.StringWithTime) bool {
-	jwtTokenClaim, err := parseJwtTokenClaim(s.Content)
+	jwtTokenClaim, err := ParseJwtTokenClaim(s.Content)
 	if err != nil {
 		return true
 	}
@@ -80,7 +80,7 @@ func isContentExpiringOrExpired(s *utils.StringWithTime) bool {
 }
 
 func isContentExpired(s *utils.StringWithTime) bool {
-	jwtTokenClaim, err := parseJwtTokenClaim(s.Content)
+	jwtTokenClaim, err := ParseJwtTokenClaim(s.Content)
 	if err != nil {
 		return true
 	}
@@ -105,7 +105,7 @@ func (t *SimpleJwtClaims) IsValidAtLeastThreshold(thresholdDuration time.Duratio
 	return valid
 }
 
-func parseJwtTokenClaim(jwt string) (*SimpleJwtClaims, error) {
+func ParseJwtTokenClaim(jwt string) (*SimpleJwtClaims, error) {
 	jwtParts := strings.Split(jwt, ".")
 	if len(jwtParts) != 3 {
 		return nil, errors.Errorf("Invalid JWT token: %s", jwt)

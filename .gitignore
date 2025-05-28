@@ -1,5 +1,6 @@
 .DS_Store
 .idea/
+out/
 alibaba-cloud-idaas
 alibaba-cloud-idaas*
 

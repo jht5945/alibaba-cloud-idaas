@@ -6,6 +6,7 @@ import (
 	sts20150401 "github.com/alibabacloud-go/sts-20150401/v2/client"
 	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/cloud_common"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/constants"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
@@ -156,7 +157,7 @@ func assumeRoleWithOidc(client *sts20150401.Client, oidcToken string, options *F
 	if options.RoleSessionName != "" {
 		roleSessionName = options.RoleSessionName
 	} else {
-		roleSessionName = fmt.Sprintf("idaas-assumed-role-%d", time.Now().UnixMilli())
+		roleSessionName = cloud_common.GenerateRoleSessionName(oidcToken)
 		idaaslog.Info.PrintfLn(
 			"Assume role session name not specified, use role session name %s", roleSessionName)
 	}
