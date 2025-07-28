@@ -14,13 +14,9 @@ type FetchCloudStsOptions struct {
 }
 
 func FetchCloudStsFromDefaultConfig(profile string, options *FetchCloudStsOptions) (any, *config.CloudStsConfig, error) {
-	cloudCredentialConfig, err := config.LoadDefaultCloudCredentialConfig()
+	profile, cloudStsConfig, err := config.FindProfile(profile)
 	if err != nil {
-		return nil, nil, err
-	}
-	profile, cloudStsConfig := cloudCredentialConfig.FindProfile(profile)
-	if cloudStsConfig == nil {
-		return nil, cloudStsConfig, fmt.Errorf("profile: %s not found", profile)
+		return nil, cloudStsConfig, fmt.Errorf("find profie `%s` error: %s", profile, err)
 	}
 	sts, err := FetchCloudSts(profile, cloudStsConfig, options)
 	if err != nil {

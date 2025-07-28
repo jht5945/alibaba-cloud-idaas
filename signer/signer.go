@@ -24,6 +24,10 @@ const (
 	ES512
 )
 
+func (a JwtSignAlgorithm) IsRsa() bool {
+	return a == RS256 || a == RS384 || a == RS512
+}
+
 func (a JwtSignAlgorithm) IsEcc() bool {
 	return a == ES256 || a == ES384 || a == ES512
 }
@@ -66,6 +70,25 @@ func (a JwtSignAlgorithm) GetHash() crypto.Hash {
 	}
 }
 
+func (a JwtSignAlgorithm) GetHashStrName() string {
+	switch a {
+	case ES256:
+		return "sha256"
+	case RS256:
+		return "sha256"
+	case ES384:
+		return "sha384"
+	case RS384:
+		return "sha384"
+	case ES512:
+		return "sha512"
+	case RS512:
+		return "sha512"
+	default:
+		panic("SHOULD NOT HAPPEN")
+	}
+}
+
 func ParseJwtSignAlgorithm(s string) (JwtSignAlgorithm, error) {
 	switch s {
 	case "RS256":
@@ -86,9 +109,11 @@ func ParseJwtSignAlgorithm(s string) (JwtSignAlgorithm, error) {
 }
 
 type ExSigner interface {
-	Public() (*crypto.PublicKey, error)
+	Public() (crypto.PublicKey, error)
 
 	Sign(rand io.Reader, alg JwtSignAlgorithm, message []byte) ([]byte, error)
+
+	SignDigest(rand io.Reader, alg JwtSignAlgorithm, digest []byte) ([]byte, error)
 }
 
 type JwtSigner interface {
@@ -189,6 +214,10 @@ func (s *ExJwtSigner) SignJwt(header, claim map[string]interface{}) (string, err
 	jwt := headerAndClaim + "." + signatureBase64Str
 	idaaslog.Debug.PrintfLn("SignJwt: jwt is %s", jwt)
 	return jwt, nil
+}
+
+func (s *ExJwtSigner) GetExtSinger() ExSigner {
+	return s.singer
 }
 
 func generateJti() string {

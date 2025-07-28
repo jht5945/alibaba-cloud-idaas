@@ -21,10 +21,14 @@ func NewYubiKeyPivSigner(slotId, pin, pinPolicy string) (*YubiKeyPivSigner, erro
 	return nil, errors.New("YubiKey PIV is not enabled")
 }
 
-func (s *YubiKeyPivSigner) Public() (*crypto.PublicKey, error) {
+func (s *YubiKeyPivSigner) Public() (crypto.PublicKey, error) {
 	return nil, nil
 }
 
 func (s *YubiKeyPivSigner) Sign(rand io.Reader, alg signer.JwtSignAlgorithm, message []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (s *YubiKeyPivSigner) SignDigest(rand io.Reader, alg signer.JwtSignAlgorithm, digest []byte) ([]byte, error) {
 	return nil, nil
 }

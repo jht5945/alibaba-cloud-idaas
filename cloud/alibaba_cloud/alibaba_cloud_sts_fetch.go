@@ -64,7 +64,7 @@ func FetchStsWithOidcConfig(profile string, alibabaCloudStsConfig *config.Alibab
 
 func FetchStsWithOidc(profile string, alibabaCloudStsConfig *config.AlibabaCloudStsConfig, options *FetchStsWithOidcOptions) (*StsToken, error) {
 	digest := alibabaCloudStsConfig.Digest()
-	readCacheFileOptions := &utils.ReadCacheFileOptions{
+	readCacheFileOptions := &utils.ReadCacheOptions{
 		Context: map[string]interface{}{
 			"profile": profile,
 			"digest":  digest,

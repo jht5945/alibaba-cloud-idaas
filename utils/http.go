@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/constants"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
 	"github.com/pkg/errors"
 	"io"
 	"net/http"
@@ -13,12 +15,16 @@ import (
 	"time"
 )
 
+const (
+	HttpMethodPut  = "PUT"
+	HttpMethodGet  = "GET"
+	HttpMethodPost = "POST"
+)
+
 var UserAgent = getUserAgent()
 
 func PostHttp(postUrl string, parameters map[string]string) (int, string, error) {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
+	client := BuildHttpClient()
 	postBody := ""
 	for key, value := range parameters {
 		if len(postBody) > 0 {
@@ -26,7 +32,7 @@ func PostHttp(postUrl string, parameters map[string]string) (int, string, error)
 		}
 		postBody += url.QueryEscape(key) + "=" + url.QueryEscape(value)
 	}
-	req, err := http.NewRequest("POST", postUrl, strings.NewReader(postBody))
+	req, err := http.NewRequest(HttpMethodPost, postUrl, strings.NewReader(postBody))
 	if err != nil {
 		return 0, "", errors.Wrapf(err, "new request: %s", postUrl)
 	}
@@ -45,10 +51,8 @@ func PostHttp(postUrl string, parameters map[string]string) (int, string, error)
 }
 
 func GetHttp(getUrl string) (int, string, error) {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	req, err := http.NewRequest("GET", getUrl, nil)
+	client := BuildHttpClient()
+	req, err := http.NewRequest(HttpMethodGet, getUrl, nil)
 	if err != nil {
 		return 0, "", errors.Wrapf(err, "new request: %s", getUrl)
 	}
@@ -63,6 +67,47 @@ func GetHttp(getUrl string) (int, string, error) {
 		return 0, "", errors.Wrapf(err, "read response body: %s", getUrl)
 	}
 	return resp.StatusCode, string(body), nil
+}
+
+func FetchAsString(client *http.Client, method, endpoint string, headers map[string]string) (string, error) {
+	body, err := Fetch(client, method, endpoint, headers)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+func Fetch(client *http.Client, method, endpoint string, headers map[string]string) ([]byte, error) {
+	req, err := http.NewRequest(method, endpoint, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "new request: "+endpoint)
+	}
+	req.Header.Set("User-Agent", UserAgent)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	req.Header.Set("X-aws-ec2-metadata-token-ttl-seconds", "3600")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.Wrapf(err, "do %s request: %s", method, endpoint)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "read response body: %s", endpoint)
+	}
+	idaaslog.Unsafe.PrintfLn("%s %s, response: base64-encoded: %s", method, endpoint, base64.StdEncoding.EncodeToString(body))
+	if resp.StatusCode != 200 {
+		return nil, errors.Errorf("status code %d not 200: %s", resp.StatusCode, string(body))
+	}
+	return body, nil
+}
+
+func BuildHttpClient() *http.Client {
+	return &http.Client{
+		Timeout: 10 * time.Second,
+	}
 }
 
 func getUserAgent() string {

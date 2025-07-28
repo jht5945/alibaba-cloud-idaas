@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/qr"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/serve"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/show_signer_public_key"
 	"os"
 	"strings"
 
@@ -44,6 +47,9 @@ func innerMain() error {
 			clean_cache.BuildCommand(),
 			execute.BuildCommand(),
 			show_cache.BuildCommand(),
+			show_signer_public_key.BuildCommand(),
+			serve.BuildCommand(),
+			qr.BuildCommand(),
 		},
 		Action: func(context *cli.Context) error {
 			printBanner()

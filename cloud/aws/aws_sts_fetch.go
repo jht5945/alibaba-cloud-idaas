@@ -54,7 +54,7 @@ func FetchAwsStsWithOidcConfig(profile string, awsCloudStsConfig *config.AwsClou
 
 func FetchStsWithOidc(profile string, awsCloudStsConfig *config.AwsCloudStsConfig, options *FetchAwsStsWithOidcOptions) (*AwsStsToken, error) {
 	digest := awsCloudStsConfig.Digest()
-	readCacheFileOptions := &utils.ReadCacheFileOptions{
+	readCacheFileOptions := &utils.ReadCacheOptions{
 		Context: map[string]interface{}{
 			"profile": profile,
 			"digest":  digest,

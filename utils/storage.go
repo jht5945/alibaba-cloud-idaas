@@ -42,6 +42,28 @@ func UnmarshalStringWithTime(str string) (*StringWithTime, error) {
 	return &stringWithTime, nil
 }
 
+func (s *StringWithTime) IsExpiredWithCustomFunc(isExpired func(time *StringWithTime) bool) bool {
+	if s == nil {
+		// mark as expired when nil
+		return true
+	}
+	if isExpired != nil {
+		return isExpired(s)
+	}
+	return s.IsExpired()
+}
+
+func (s *StringWithTime) IsExpiringOrExpiredWithCustomFunc(isExpiringOrExpired func(time *StringWithTime) bool) bool {
+	if s == nil {
+		// mark as expiring or expired when nil
+		return true
+	}
+	if isExpiringOrExpired != nil {
+		return isExpiringOrExpired(s)
+	}
+	return s.IsExpiringOrExpired()
+}
+
 func (s *StringWithTime) IsExpired() bool {
 	return (time.Now().UnixMilli() - s.CacheTime) > (3 * 24 * time.Hour.Milliseconds())
 }
@@ -58,7 +80,7 @@ func (s *StringWithTime) Marshal() (string, error) {
 	return string(bs), nil
 }
 
-type ReadCacheFileOptions struct {
+type ReadCacheOptions struct {
 	Context                    map[string]interface{}
 	FetchContent               func() (int, string, error)
 	ForceNew                   bool
@@ -67,9 +89,28 @@ type ReadCacheFileOptions struct {
 	IsContentExpired           func(time *StringWithTime) bool
 }
 
-func ReadCacheFileWithEncryptionCallback(category, key string, options *ReadCacheFileOptions) (string, error) {
+type CacheReadWrite interface {
+	Read(string, string) (string, error)
+	Write(string, string, string) error
+}
+
+type EncryptedFileCacheReadWrite struct{}
+
+func (e *EncryptedFileCacheReadWrite) Read(category string, key string) (string, error) {
+	return ReadCacheFileWithEncryption(category, key)
+}
+
+func (e *EncryptedFileCacheReadWrite) Write(category string, key string, content string) error {
+	return WriteCacheFileWithEncryption(category, key, content)
+}
+
+func ReadCacheFileWithEncryptionCallback(category, key string, options *ReadCacheOptions) (string, error) {
+	return ReadCacheWithEncryptionCallback(category, key, &EncryptedFileCacheReadWrite{}, options)
+}
+
+func ReadCacheWithEncryptionCallback(category, key string, cacheReadWrite CacheReadWrite, options *ReadCacheOptions) (string, error) {
 	var stringWithTime *StringWithTime
-	data, err := ReadCacheFileWithEncryption(category, key)
+	data, err := cacheReadWrite.Read(category, key)
 	if err != nil {
 		idaaslog.Warn.PrintfLn("Read cache file [%s, %s] with encryption failed: %v, ignore error",
 			category, key, err)
@@ -81,14 +122,7 @@ func ReadCacheFileWithEncryptionCallback(category, key string, options *ReadCach
 				category, key, err)
 		}
 	}
-	expiringOrExpired := true
-	if stringWithTime != nil {
-		if options.IsContentExpired != nil {
-			expiringOrExpired = options.IsContentExpiringOrExpired(stringWithTime)
-		} else {
-			expiringOrExpired = stringWithTime.IsExpiringOrExpired()
-		}
-	}
+	expiringOrExpired := stringWithTime.IsExpiringOrExpiredWithCustomFunc(options.IsContentExpiringOrExpired)
 	if options.ForceNew {
 		expiringOrExpired = true
 	}
@@ -113,7 +147,7 @@ func ReadCacheFileWithEncryptionCallback(category, key string, options *ReadCach
 				if err != nil {
 					idaaslog.Error.PrintfLn("Marshal content failed: %v", err)
 				} else {
-					err = WriteCacheFileWithEncryption(category, key, marshaledContent)
+					err = cacheReadWrite.Write(category, key, marshaledContent)
 					if err != nil {
 						idaaslog.Error.PrintfLn("Write content failed: %v", err)
 					}
@@ -122,24 +156,19 @@ func ReadCacheFileWithEncryptionCallback(category, key string, options *ReadCach
 			}
 		}
 	}
-
-	if options.ForceNew {
-		return "", errors.New("fetch content failed, with ForceNew option")
-	}
-
 	if fetchContentErr != nil && strings.Contains(fetchContentErr.Error(), constants.ErrStopFallback) {
 		return "", errors.New("user denied, stop fallback to local cached credentials")
 	}
 
+	if options.ForceNew {
+		return "", errors.Errorf("fetch content failed, with ForceNew option, original error: %v", fetchContentErr)
+	}
+
 	if stringWithTime != nil {
-		var expired bool
-		if options.IsContentExpired != nil {
-			expired = options.IsContentExpired(stringWithTime)
-		} else {
-			expired = stringWithTime.IsExpired()
-		}
+		expired := stringWithTime.IsExpiredWithCustomFunc(options.IsContentExpired)
 		if !expired {
 			idaaslog.Warn.PrintfLn("Expired cache file [%s, %s], not expired", category, key)
+			idaaslog.Unsafe.PrintfLn("Cached file [%s, %s], content: %v", category, key, stringWithTime)
 			return stringWithTime.Content, nil
 		}
 		if options.AllowExpired {

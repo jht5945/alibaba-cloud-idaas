@@ -10,7 +10,10 @@ import (
 )
 
 const (
-	ClientAssertionTypeJwtBearer = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+	ClientAssertionTypeJwtBearer     = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+	ClientAssertionTypePkcs7Bearer   = "urn:cloud:idaas:params:oauth:client-assertion-type:pkcs7-bearer"
+	ClientAssertionTypeIdTokenBearer = "urn:cloud:idaas:params:oauth:client-assertion-type:id-token-bearer"
+	ClientAssertionTypeX509JwtBearer = "urn:cloud:idaas:params:oauth:client-assertion-type:x509-jwt-bearer"
 
 	GrantTypeClientCredentials = "client_credentials"
 	GrantTypeDeviceCode        = "urn:ietf:params:oauth:grant-type:device_code"
@@ -19,6 +22,14 @@ const (
 	ErrorCodeSlowDown             = "slow_down"
 	ErrorAccessDenied             = "access_denied"
 )
+
+type FetchTokenCommonOptions struct {
+	TokenEndpoint                      string
+	ClientId                           string
+	GrantType                          string
+	Scope                              string
+	ApplicationFederatedCredentialName string
+}
 
 // TokenResponse
 // specification: RFC6749
@@ -86,6 +97,11 @@ type FetchTokenOptions struct {
 	// for RFC7523
 	ClientAssertionType string
 	ClientAssertion     string
+
+	// for Alibaba Cloud IDaaS Identity Anywhere
+	ClientX509                         string
+	ClientX509Chain                    string
+	ApplicationFederatedCredentialName string
 }
 
 type FetchOpenIdConfigurationOptions struct {
@@ -118,6 +134,15 @@ func FetchToken(tokenEndpoint string, options *FetchTokenOptions) (*TokenRespons
 	if options.ClientAssertion != "" {
 		parameter["client_assertion"] = options.ClientAssertion
 	}
+	if options.ClientX509 != "" {
+		parameter["client_x509"] = options.ClientX509
+	}
+	if options.ClientX509Chain != "" {
+		parameter["client_x509_chain"] = options.ClientX509Chain
+	}
+	if options.ApplicationFederatedCredentialName != "" {
+		parameter["application_federated_credential_name"] = options.ApplicationFederatedCredentialName
+	}
 	idaaslog.Unsafe.PrintfLn("Fetch token: %s, with parameter: %+v", tokenEndpoint, parameter)
 	statusCode, token, err := utils.PostHttp(tokenEndpoint, parameter)
 	if err != nil {
@@ -146,7 +171,7 @@ func FetchToken(tokenEndpoint string, options *FetchTokenOptions) (*TokenRespons
 func FetchOpenIdConfiguration(issuer string, fetchOptions *FetchOpenIdConfigurationOptions) (*OpenIdConfiguration, error) {
 	discovery := issuer + "/.well-known/openid-configuration"
 	idaaslog.Info.PrintfLn("OIDC discovery URL: %s", discovery)
-	options := &utils.ReadCacheFileOptions{
+	options := &utils.ReadCacheOptions{
 		Context: map[string]interface{}{
 			"issuer":    issuer,
 			"discovery": discovery,

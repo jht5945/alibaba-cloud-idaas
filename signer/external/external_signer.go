@@ -46,19 +46,19 @@ func NewExCommandSigner(command string, parameter string) (*ExCommandSigner, err
 	}, nil
 }
 
-func (ex *ExCommandSigner) Public() (publicKey *crypto.PublicKey, err error) {
+func (ex *ExCommandSigner) Public() (publicKey crypto.PublicKey, err error) {
 	return internalGetPublicKey(ex.command, ex.parameter)
 }
 
 func (ex *ExCommandSigner) Sign(rand io.Reader, alg signer.JwtSignAlgorithm, message []byte) (signature []byte, err error) {
-	algStr := alg.ToString()
-	if algStr == "" {
-		return nil, errors.New("invalid algorithm")
-	}
-	return internalSign(ex.command, ex.parameter, algStr, message)
+	return internalSign(ex.command, ex.parameter, alg, message, true)
 }
 
-func internalGetPublicKey(command, parameter string) (*crypto.PublicKey, error) {
+func (ex *ExCommandSigner) SignDigest(rand io.Reader, alg signer.JwtSignAlgorithm, digest []byte) (signature []byte, err error) {
+	return internalSign(ex.command, ex.parameter, alg, digest, false)
+}
+
+func internalGetPublicKey(command, parameter string) (crypto.PublicKey, error) {
 	cmd := exec.Command(command,
 		"external_public_key",
 		"--parameter", parameter)
@@ -92,15 +92,31 @@ func internalGetPublicKey(command, parameter string) (*crypto.PublicKey, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse public key")
 	}
-	return (*crypto.PublicKey)(&publicKey), nil
+	return publicKey, nil
 }
 
-func internalSign(command, parameter, alg string, message []byte) ([]byte, error) {
+func internalSign(command, parameter string, alg signer.JwtSignAlgorithm, message []byte, isRaw bool) ([]byte, error) {
+	algStr := alg.ToString()
+	if algStr == "" {
+		return nil, errors.New("invalid algorithm")
+	}
+	var hashAlgo string
+	if isRaw {
+		hashAlgo = "raw"
+	} else {
+		hashAlgo = alg.GetHashStrName()
+		if len(message) != alg.GetHash().Size() {
+			return nil, errors.Errorf("Algorithm: %s requires digest length: %d, provided length: %d",
+				alg.GetHashStrName(), alg.GetHash().Size(), len(message))
+		}
+	}
+
 	cmd := exec.Command(command,
 		"external_sign",
-		"--alg", alg,
+		"--alg", algStr,
 		"--parameter", parameter,
-		"--message-base64", base64.StdEncoding.EncodeToString(message))
+		"--message-base64", base64.StdEncoding.EncodeToString(message),
+		"--message-type", hashAlgo)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	var stdout bytes.Buffer

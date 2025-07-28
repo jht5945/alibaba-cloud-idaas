@@ -54,7 +54,7 @@ func NewPkcs11Signer(pkcs11LibPath, tokenLabel, pin, keyLabel string) (*Pkcs11Si
 	}, nil
 }
 
-func (s *Pkcs11Signer) Public() (*crypto.PublicKey, error) {
+func (s *Pkcs11Signer) Public() (crypto.PublicKey, error) {
 	ctx, err := crypto11.Configure(s.config)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to configure crypto")
@@ -66,10 +66,22 @@ func (s *Pkcs11Signer) Public() (*crypto.PublicKey, error) {
 		return nil, errors.Wrapf(err, "failed to find private key, key label: %s", s.keyLabel)
 	}
 	pubKey := privKey.Public()
-	return &pubKey, nil
+	return pubKey, nil
 }
 
 func (s *Pkcs11Signer) Sign(rand io.Reader, alg signer.JwtSignAlgorithm, message []byte) ([]byte, error) {
+	hash := alg.GetHash()
+	hasher := hash.New()
+	_, err := hasher.Write(message)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to hash message")
+	}
+
+	hashed := hasher.Sum(message[:0])
+	return s.SignDigest(rand, alg, hashed)
+}
+
+func (s *Pkcs11Signer) SignDigest(rand io.Reader, alg signer.JwtSignAlgorithm, digest []byte) ([]byte, error) {
 	ctx, err := crypto11.Configure(s.config)
 	if err != nil {
 		return nil, err
@@ -82,14 +94,12 @@ func (s *Pkcs11Signer) Sign(rand io.Reader, alg signer.JwtSignAlgorithm, message
 	}
 
 	hash := alg.GetHash()
-	hasher := hash.New()
-	_, err = hasher.Write(message)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to hash message")
+	if len(digest) != hash.Size() {
+		return nil, errors.Errorf("Algorithm: %s requires digest length: %d, provided length: %d",
+			alg.GetHashStrName(), hash.Size(), len(digest))
 	}
 
-	hashed := hasher.Sum(message[:0])
-	signature, err := pkcsSigner.Sign(rand, hashed, hash)
+	signature, err := pkcsSigner.Sign(rand, digest, hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign message")
 	}

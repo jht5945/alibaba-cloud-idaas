@@ -7,12 +7,14 @@ import (
 	"time"
 )
 
-type FetchTokenRfc7523Options struct {
+type FetchTokenX509JwtBearerOptions struct {
 	*FetchTokenCommonOptions
-	JwtSigner signer.JwtSigner
+	ClientX509      string
+	ClientX509Chain string
+	JwtSigner       signer.JwtSigner
 }
 
-func FetchTokenRfc7523(tokenEndpoint string, options *FetchTokenRfc7523Options) (*TokenResponse, *ErrorResponse, error) {
+func FetchTokenX509JwtBearer(tokenEndpoint string, options *FetchTokenX509JwtBearerOptions) (*TokenResponse, *ErrorResponse, error) {
 	jwtSingerOptions := &signer.JwtSignerOptions{
 		Issuer:   options.ClientId,
 		Audience: options.TokenEndpoint,
@@ -27,11 +29,14 @@ func FetchTokenRfc7523(tokenEndpoint string, options *FetchTokenRfc7523Options) 
 	}
 
 	fetchTokenOptions := &FetchTokenOptions{
-		ClientId:            options.ClientId,
-		GrantType:           options.GrantType,
-		Scope:               options.Scope,
-		ClientAssertionType: ClientAssertionTypeJwtBearer,
-		ClientAssertion:     jwtToken,
+		ClientId:                           options.ClientId,
+		GrantType:                          options.GrantType,
+		Scope:                              options.Scope,
+		ClientAssertionType:                ClientAssertionTypeX509JwtBearer,
+		ClientAssertion:                    jwtToken,
+		ClientX509:                         options.ClientX509,
+		ClientX509Chain:                    options.ClientX509Chain,
+		ApplicationFederatedCredentialName: options.ApplicationFederatedCredentialName,
 	}
 
 	return FetchToken(tokenEndpoint, fetchTokenOptions)

@@ -20,8 +20,22 @@ type StsToken struct {
 	Expiration      string `json:"expiration"`
 }
 
+// StsTokenOssutilv2
 // https://help.aliyun.com/zh/oss/developer-reference/configure-ossutil2
 type StsTokenOssutilv2 struct {
+	AccessKeyId     string `json:"AccessKeyId"`
+	AccessKeySecret string `json:"AccessKeySecret"`
+	StsToken        string `json:"SecurityToken"`
+	Expiration      string `json:"Expiration"`
+}
+
+// StsTokenCredentialsUri
+// https://github.com/aliyun/aliyun-cli/blob/master/config/profile.go
+// com.aliyun.credentials.provider.URLCredentialProvider
+// com.aliyun.oss.common.auth.CustomSessionCredentialsFetcher#CustomSessionCredentialsFetcher
+type StsTokenCredentialsUri struct {
+	Code            string `json:"Code"`
+	StatusCode      string `json:"StatusCode"`
 	AccessKeyId     string `json:"AccessKeyId"`
 	AccessKeySecret string `json:"AccessKeySecret"`
 	StsToken        string `json:"SecurityToken"`
@@ -36,6 +50,18 @@ func (t *StsToken) ConvertToOssutilv2() *StsTokenOssutilv2 {
 		Expiration:      t.Expiration,
 	}
 	return stsTokenOssutilv2
+}
+
+func (t *StsToken) ConvertToCredentialsUri() *StsTokenCredentialsUri {
+	stsTokenCredentialsUri := &StsTokenCredentialsUri{
+		Code:            "Success",
+		StatusCode:      "200",
+		AccessKeyId:     t.AccessKeyId,
+		AccessKeySecret: t.AccessKeySecret,
+		StsToken:        t.StsToken,
+		Expiration:      t.Expiration,
+	}
+	return stsTokenCredentialsUri
 }
 
 func (t *StsToken) Marshal() (string, error) {

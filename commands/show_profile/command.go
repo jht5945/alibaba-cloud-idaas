@@ -133,43 +133,115 @@ func showClientCredentials(color bool, clientCredentials *config.OidcTokenProvid
 		fmt.Printf(" - %s: %s\n", pad2("Scope"), utils.Green(clientCredentials.Scope, color))
 		clientAssertionSinger := clientCredentials.ClientAssertionSinger
 		if clientAssertionSinger != nil {
-			showPkcs11(color, clientAssertionSinger)
-			showYubiKeyPiv(color, clientAssertionSinger)
-			showExternalCommand(color, clientAssertionSinger)
+			showPkcs11(color, clientAssertionSinger, "")
+			showYubiKeyPiv(color, clientAssertionSinger, "")
+			showExternalCommand(color, clientAssertionSinger, "")
+			showKeyFile(color, clientAssertionSinger, "")
+		}
+		showOidcTokenConfig(color, clientCredentials)
+		showPkcs7Config(color, clientCredentials)
+		showPrivateCaConfig(color, clientCredentials)
+	}
+}
+
+func showOidcTokenConfig(color bool, clientCredentials *config.OidcTokenProviderClientCredentialsConfig) {
+	oidcTokenConfig := clientCredentials.ClientAssertionOidcTokenConfig
+	if oidcTokenConfig != nil {
+		fmt.Printf(" - %s: %s\n", pad2("AppFedCredentialName"), utils.Green(clientCredentials.ApplicationFederatedCredentialName, color))
+		fmt.Printf(" - %s: %s\n", pad2("Assertion"), utils.Green("OIDC Token", color))
+		fmt.Printf("   - %s: %s\n", pad3("Provider"), utils.Green(oidcTokenConfig.Provider, color))
+		fmt.Printf("   - %s: %s\n", pad3("GoogleVmIdentityUrl"), utils.Green(oidcTokenConfig.GoogleVmIdentityUrl, color))
+		fmt.Printf("   - %s: %s\n", pad3("GoogleVmIdentityAud"), utils.Green(oidcTokenConfig.GoogleVmIdentityAud, color))
+		fmt.Printf("   - %s: %s\n", pad3("OidcToken"), utils.Green(oidcTokenConfig.OidcToken, color))
+		fmt.Printf("   - %s: %s\n", pad3("OidcTokenFile"), utils.Green(oidcTokenConfig.OidcTokenFile, color))
+	}
+}
+
+func showPkcs7Config(color bool, clientCredentials *config.OidcTokenProviderClientCredentialsConfig) {
+	pkcs7Config := clientCredentials.ClientAssertionPkcs7Config
+	if pkcs7Config != nil {
+		fmt.Printf(" - %s: %s\n", pad2("AppFedCredentialName"), utils.Green(clientCredentials.ApplicationFederatedCredentialName, color))
+		fmt.Printf(" - %s: %s\n", pad2("Assertion"), utils.Green("PKCS#7", color))
+		fmt.Printf("   - %s: %s\n", pad3("Provider"), utils.Green(pkcs7Config.Provider, color))
+		fmt.Printf("   - %s: %s\n", pad3("AlibabaCloudMode"), utils.Green(pkcs7Config.AlibabaCloudMode, color))
+		fmt.Printf("   - %s: %s\n", pad3("AlibabaCloudIdaasInstanceId"), utils.Green(pkcs7Config.AlibabaCloudIdaasInstanceId, color))
+	}
+}
+
+func showPrivateCaConfig(color bool, clientCredentials *config.OidcTokenProviderClientCredentialsConfig) {
+	privateCaConfig := clientCredentials.ClientAssertionPrivateCaConfig
+	if privateCaConfig != nil {
+		fmt.Printf(" - %s: %s\n", pad2("AppFedCredentialName"), utils.Green(clientCredentials.ApplicationFederatedCredentialName, color))
+		fmt.Printf(" - %s: %s\n", pad2("Assertion"), utils.Green("Private CA", color))
+		fmt.Printf("   - %s: %s\n", pad3("Certificate"), utils.Green(privateCaConfig.Certificate, color))
+		fmt.Printf("   - %s: %s\n", pad3("CertificateFile"), utils.Green(privateCaConfig.CertificateFile, color))
+		fmt.Printf("   - %s: %s\n", pad3("CertificateChain"), utils.Green(privateCaConfig.CertificateChain, color))
+		fmt.Printf("   - %s: %s\n", pad3("CertificateChainFile"), utils.Green(privateCaConfig.CertificateChainFile, color))
+
+		certificateKeySigner := privateCaConfig.CertificateKeySigner
+		if certificateKeySigner != nil {
+			showPkcs11(color, certificateKeySigner, "  ")
+			showYubiKeyPiv(color, certificateKeySigner, "  ")
+			showExternalCommand(color, certificateKeySigner, "  ")
+			showKeyFile(color, certificateKeySigner, "  ")
 		}
 	}
 }
 
-func showExternalCommand(color bool, clientAssertionSinger *config.ExSingerConfig) {
+func showKeyFile(color bool, clientAssertionSinger *config.ExSingerConfig, prefix string) {
+	keyFile := clientAssertionSinger.KeyFile
+	if keyFile != nil {
+		fmt.Printf("%s - %s: %s\n", prefix, pad2("Singer"), utils.Green("Key File", color))
+		if keyFile.Key != "" {
+			if strings.Contains(keyFile.Key, "ENCRYPTED") {
+				fmt.Printf("%s   - %s: %s\n", prefix, pad3("Key"), utils.Green(keyFile.Key, color))
+			} else {
+				fmt.Printf("%s   - %s: %s\n", prefix, pad3("Key"), utils.Green("******", color))
+			}
+		}
+		if keyFile.File != "" {
+			if strings.Contains(keyFile.File, "ENCRYPTED") {
+				fmt.Printf("%s   - %s: %s\n", prefix, pad3("File"), utils.Green(keyFile.File, color))
+			} else {
+				fmt.Printf("%s   - %s: %s\n", prefix, pad3("File"), utils.Green("******", color))
+			}
+		}
+		if keyFile.Password != "" {
+			fmt.Printf("%s   - %s: %s\n", prefix, pad3("Password"), utils.Green("******", color))
+		}
+	}
+}
+
+func showExternalCommand(color bool, clientAssertionSinger *config.ExSingerConfig, prefix string) {
 	externalCommand := clientAssertionSinger.ExternalCommand
 	if externalCommand != nil {
-		fmt.Printf(" - %s: %s\n", pad2("Singer"), utils.Green("External Command", color))
-		fmt.Printf("   - %s: %s\n", pad3("Command"), utils.Green(externalCommand.Command, color))
-		fmt.Printf("   - %s: %s\n", pad3("Parameter"), utils.Green(externalCommand.Parameter, color))
+		fmt.Printf("%s - %s: %s\n", prefix, pad2("Singer"), utils.Green("External Command", color))
+		fmt.Printf("%s   - %s: %s\n", prefix, pad3("Command"), utils.Green(externalCommand.Command, color))
+		fmt.Printf("%s   - %s: %s\n", prefix, pad3("Parameter"), utils.Green(externalCommand.Parameter, color))
 	}
 }
 
-func showYubiKeyPiv(color bool, clientAssertionSinger *config.ExSingerConfig) {
+func showYubiKeyPiv(color bool, clientAssertionSinger *config.ExSingerConfig, prefix string) {
 	yubikeyPiv := clientAssertionSinger.YubikeyPiv
 	if yubikeyPiv != nil {
-		fmt.Printf(" - %s: %s\n", pad2("Singer"), utils.Green("YubiKey PIV", color))
-		fmt.Printf("   - %s: %s\n", pad3("Slot"), utils.Green(yubikeyPiv.Slot, color))
+		fmt.Printf("%s - %s: %s\n", prefix, pad2("Singer"), utils.Green("YubiKey PIV", color))
+		fmt.Printf("%s   - %s: %s\n", prefix, pad3("Slot"), utils.Green(yubikeyPiv.Slot, color))
 		if yubikeyPiv.Pin != "" {
-			fmt.Printf("   - %s: %s\n", pad3("Pin"), utils.Green("******", color))
+			fmt.Printf("%s   - %s: %s\n", prefix, pad3("Pin"), utils.Green("******", color))
 		}
-		fmt.Printf("   - %s: %s\n", pad3("PinPolicy"), utils.Green(yubikeyPiv.PinPolicy, color))
+		fmt.Printf("%s   - %s: %s\n", prefix, pad3("PinPolicy"), utils.Green(yubikeyPiv.PinPolicy, color))
 	}
 }
 
-func showPkcs11(color bool, clientAssertionSinger *config.ExSingerConfig) {
+func showPkcs11(color bool, clientAssertionSinger *config.ExSingerConfig, prefix string) {
 	pkcs11 := clientAssertionSinger.Pkcs11
 	if pkcs11 != nil {
-		fmt.Printf(" - %s: %s\n", pad2("Singer"), utils.Green("PKCS#11", color))
-		fmt.Printf("   - %s: %s\n", pad3("LibraryPath"), utils.Green(pkcs11.LibraryPath, color))
-		fmt.Printf("   - %s: %s\n", pad3("TokenLabel"), utils.Green(pkcs11.TokenLabel, color))
-		fmt.Printf("   - %s: %s\n", pad3("KeyLabel"), utils.Green(pkcs11.KeyLabel, color))
+		fmt.Printf("%s - %s: %s\n", prefix, pad2("Singer"), utils.Green("PKCS#11", color))
+		fmt.Printf("%s   - %s: %s\n", prefix, pad3("LibraryPath"), utils.Green(pkcs11.LibraryPath, color))
+		fmt.Printf("%s   - %s: %s\n", prefix, pad3("TokenLabel"), utils.Green(pkcs11.TokenLabel, color))
+		fmt.Printf("%s   - %s: %s\n", prefix, pad3("KeyLabel"), utils.Green(pkcs11.KeyLabel, color))
 		if pkcs11.Pin != "" {
-			fmt.Printf("   - %s: %s\n", pad3("Pin"), utils.Green("******", color))
+			fmt.Printf("%s   - %s: %s\n", prefix, pad3("Pin"), utils.Green("******", color))
 		}
 	}
 }

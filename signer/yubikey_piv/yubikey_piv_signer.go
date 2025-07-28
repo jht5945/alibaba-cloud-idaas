@@ -25,7 +25,7 @@ type YubiKeyPivSigner struct {
 	pin       string
 	pinPolicy piv.PINPolicy
 	slot      piv.Slot
-	publicKey *crypto.PublicKey
+	publicKey crypto.PublicKey
 }
 
 func NewYubiKeyPivSigner(slotId, pin, pinPolicy string) (*YubiKeyPivSigner, error) {
@@ -51,15 +51,27 @@ func NewYubiKeyPivSigner(slotId, pin, pinPolicy string) (*YubiKeyPivSigner, erro
 		pin:       pin,
 		pinPolicy: pivPinPolicy,
 		slot:      pivSlot,
-		publicKey: (*crypto.PublicKey)(&cert.PublicKey),
+		publicKey: cert.PublicKey,
 	}, nil
 }
 
-func (s *YubiKeyPivSigner) Public() (*crypto.PublicKey, error) {
+func (s *YubiKeyPivSigner) Public() (crypto.PublicKey, error) {
 	return s.publicKey, nil
 }
 
 func (s *YubiKeyPivSigner) Sign(rand io.Reader, alg signer.JwtSignAlgorithm, message []byte) ([]byte, error) {
+	hash := alg.GetHash()
+	hasher := hash.New()
+	_, err := hasher.Write(message)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to hash message")
+	}
+
+	hashed := hasher.Sum(message[:0])
+	return s.SignDigest(rand, alg, hashed)
+}
+
+func (s *YubiKeyPivSigner) SignDigest(rand io.Reader, alg signer.JwtSignAlgorithm, digest []byte) ([]byte, error) {
 	yubikey, err := findYubiKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find YubiKey")
@@ -76,7 +88,7 @@ func (s *YubiKeyPivSigner) Sign(rand io.Reader, alg signer.JwtSignAlgorithm, mes
 			return pin, nil
 		},
 	}
-	priv, err := yubikey.PrivateKey(s.slot, *s.publicKey, auth)
+	priv, err := yubikey.PrivateKey(s.slot, s.publicKey, auth)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get private key, slot: %v", s.slot)
 	}
@@ -86,14 +98,12 @@ func (s *YubiKeyPivSigner) Sign(rand io.Reader, alg signer.JwtSignAlgorithm, mes
 	}
 
 	hash := alg.GetHash()
-	hasher := hash.New()
-	_, err = hasher.Write(message)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to hash message")
+	if len(digest) != hash.Size() {
+		return nil, errors.Errorf("Algorithm: %s requires digest length: %d, provided length: %d",
+			alg.GetHashStrName(), hash.Size(), len(digest))
 	}
 
-	hashed := hasher.Sum(message[:0])
-	signature, err := pivSigner.Sign(rand, hashed, hash)
+	signature, err := pivSigner.Sign(rand, digest, hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign message")
 	}

@@ -19,7 +19,7 @@ type FetchOidcTokenOptions struct {
 
 func FetchOidcToken(profile string, oidcTokenProviderConfig *config.OidcTokenProviderConfig, options *FetchOidcTokenOptions) (string, error) {
 	digest := oidcTokenProviderConfig.Digest()
-	readCacheFileOptions := &utils.ReadCacheFileOptions{
+	readCacheFileOptions := &utils.ReadCacheOptions{
 		Context: map[string]interface{}{
 			"profile": profile,
 			"digest":  digest,

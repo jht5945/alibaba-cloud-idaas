@@ -1,0 +1,51 @@
+package idp
+
+import (
+	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/oidc"
+	"github.com/pkg/errors"
+	"os"
+)
+
+func FetchAccessTokenClientCredentialsPrivateCa(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (string, error) {
+	tokenEndpoint := credentialConfig.TokenEndpoint
+	clientAssertionPrivateCaConfig := credentialConfig.ClientAssertionPrivateCaConfig
+
+	certificate, certificateErr := readCertificate(
+		clientAssertionPrivateCaConfig.Certificate, clientAssertionPrivateCaConfig.CertificateFile)
+	if certificateErr != nil {
+		return "", certificateErr
+	}
+	certificateChain, certificateChainErr := readCertificate(
+		clientAssertionPrivateCaConfig.CertificateChain, clientAssertionPrivateCaConfig.CertificateChainFile)
+	if certificateChainErr != nil {
+		return "", certificateChainErr
+	}
+
+	jwtSigner, err := config.NewExJwtSignerFromConfig(clientAssertionPrivateCaConfig.CertificateKeySigner)
+	if err != nil {
+		return "", errors.Wrap(err, "new jwt signer failed")
+	}
+	fetchTokenX509JwtBearerOptions := &oidc.FetchTokenX509JwtBearerOptions{
+		FetchTokenCommonOptions: buildFetchTokenCommonOptions(credentialConfig),
+		ClientX509:              certificate,
+		ClientX509Chain:         certificateChain,
+		JwtSigner:               jwtSigner,
+	}
+	tokenResponse, errorResponse, err := oidc.FetchTokenX509JwtBearer(tokenEndpoint, fetchTokenX509JwtBearerOptions)
+	return parseFetchAccessToken(tokenResponse, errorResponse, err)
+}
+
+func readCertificate(certificate, certificateFile string) (string, error) {
+	if certificate != "" {
+		return certificate, nil
+	}
+	if certificateFile != "" {
+		content, err := os.ReadFile(certificateFile)
+		if err != nil {
+			return "", errors.Wrapf(err, "read certificate file %s failed", certificateFile)
+		}
+		return string(content), nil
+	}
+	return "", errors.New("no certificate provided")
+}

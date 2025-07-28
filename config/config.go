@@ -1,8 +1,11 @@
 package config
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 )
 
 const (
@@ -13,6 +16,22 @@ type CloudCredentialConfig struct {
 	Version        string                     `json:"version"` // current version always ("1" - Version1)
 	CurrentProfile string                     `json:"current_profile"`
 	Profile        map[string]*CloudStsConfig `json:"profile"` // required
+}
+
+func FindProfile(profile string) (string, *CloudStsConfig, error) {
+	tempProfile, cloudStsConfig := TryParseProfileFromInput(profile)
+	if cloudStsConfig != nil {
+		return tempProfile, cloudStsConfig, nil
+	}
+	cloudCredentialConfig, err := LoadDefaultCloudCredentialConfig()
+	if err != nil {
+		return profile, nil, err
+	}
+	profile, cloudStsConfig = cloudCredentialConfig.FindProfile(profile)
+	if cloudStsConfig == nil {
+		return profile, nil, fmt.Errorf("profile: %s not found", profile)
+	}
+	return profile, cloudStsConfig, nil
 }
 
 func (c *CloudCredentialConfig) FindProfile(profile string) (string, *CloudStsConfig) {
@@ -37,6 +56,22 @@ func (c *CloudCredentialConfig) FindProfile(profile string) (string, *CloudStsCo
 		idaaslog.Info.PrintfLn("Profile not found: %s", profile)
 		return profile, nil
 	}
+}
+
+func TryParseProfileFromInput(profile string) (string, *CloudStsConfig) {
+	if profile != "" {
+		tempProfile := fmt.Sprintf("temp-%s", utils.Sha256ToHex(profile))
+		var cloudStsConfig CloudStsConfig
+		if json.Unmarshal([]byte(profile), &cloudStsConfig) == nil {
+			return tempProfile, &cloudStsConfig
+		}
+		if profileDebase64, err := base64.StdEncoding.DecodeString(profile); err == nil {
+			if json.Unmarshal(profileDebase64, &cloudStsConfig) == nil {
+				return tempProfile, &cloudStsConfig
+			}
+		}
+	}
+	return profile, nil
 }
 
 type CloudStsConfig struct {
@@ -67,7 +102,7 @@ type AwsCloudStsConfig struct {
 type OidcTokenProviderConfig struct {
 	OidcTokenProviderClientCredentials *OidcTokenProviderClientCredentialsConfig `json:"client_credentials"` // optional *
 	OidcTokenProviderDeviceCode        *OidcTokenProviderDeviceCodeConfig        `json:"device_code"`        // optional *
-	// * client_credentials and device_code requires one
+	// * only requires one
 }
 
 func (c *OidcTokenProviderConfig) GetId() string {
@@ -92,12 +127,16 @@ func (c *OidcTokenProviderConfig) Marshal() string {
 }
 
 type OidcTokenProviderClientCredentialsConfig struct {
-	TokenEndpoint         string          `json:"token_endpoint"`          // required
-	ClientId              string          `json:"client_id"`               // required
-	Scope                 string          `json:"scope"`                   // optional
-	ClientSecret          string          `json:"client_secret"`           // optional *
-	ClientAssertionSinger *ExSingerConfig `json:"client_assertion_singer"` // optional *
-	// * client_secret and client_assertion_singer requires one
+	TokenEndpoint                      string           `json:"token_endpoint"`                        // required
+	ClientId                           string           `json:"client_id"`                             // required
+	Scope                              string           `json:"scope"`                                 // optional
+	ApplicationFederatedCredentialName string           `json:"application_federated_credential_name"` // optional
+	ClientSecret                       string           `json:"client_secret"`                         // optional *
+	ClientAssertionSinger              *ExSingerConfig  `json:"client_assertion_singer"`               // optional *
+	ClientAssertionPkcs7Config         *Pkcs7Config     `json:"client_assertion_pkcs7"`                // optional *
+	ClientAssertionPrivateCaConfig     *PrivateCaConfig `json:"client_assertion_private_ca"`           // optional *
+	ClientAssertionOidcTokenConfig     *OidcTokenConfig `json:"client_assertion_oidc_token"`           // optional *
+	// * requires one
 }
 
 type OidcTokenProviderDeviceCodeConfig struct {
@@ -110,13 +149,44 @@ type OidcTokenProviderDeviceCodeConfig struct {
 	SmallQrCode  bool   `json:"small_qr_code"` // optional, show small QR code, may cause compatible issue
 }
 
+// Pkcs7Config
+// Alibaba Cloud, AWS, Azure
+// reference:
+// - https://www.alibabacloud.com/help/en/ecs/user-guide/use-instance-identities
+// - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-iid.html
+type Pkcs7Config struct {
+	Provider                    string `json:"provider"`                        // required, enums: alibaba_cloud, aws, azure ...
+	AlibabaCloudMode            string `json:"alibaba_cloud_mode"`              // optional, normal(default), secure (security hardening)
+	AlibabaCloudIdaasInstanceId string `json:"alibaba_cloud_idaas_instance_id"` // optional, should be IDaaS instance ID
+}
+
+type PrivateCaConfig struct {
+	Certificate          string          `json:"certificate"`            // optional, certificate,base64 or PEM
+	CertificateFile      string          `json:"certificate_file"`       // optional, certificate file @see Certificate, Certificate and CertificateFile requires one
+	CertificateChain     string          `json:"certificate_chain"`      // optional, certificate chain, base64 or PEM, separator ","
+	CertificateChainFile string          `json:"certificate_chain_file"` // optional, certificate chain file @see CertificateChain
+	CertificateKeySigner *ExSingerConfig `json:"certificate_key_signer"` // optional, when private stored in external
+}
+
+// OidcTokenConfig
+// reference:
+// - https://cloud.google.com/compute/docs/instances/verifying-instance-identity
+type OidcTokenConfig struct {
+	Provider            string `json:"provider"`               // required, enums: gcp, custom
+	GoogleVmIdentityUrl string `json:"google_vm_identity_url"` // optional, only for gcp
+	GoogleVmIdentityAud string `json:"google_vm_identity_aud"` // optional, only for gcp
+	OidcToken           string `json:"oidc_token"`             // optional, only for custom
+	OidcTokenFile       string `json:"oidc_token_file"`        // optional, only for custom, OidcToken and OidcTokenFile requires one
+}
+
 type ExSingerConfig struct {
-	KeyID           string                         `json:"key_id"`           // required
+	KeyID           string                         `json:"key_id"`           // optional, PCA do not requires key_id
 	Algorithm       string                         `json:"algorithm"`        // required, RS256, RS384, RS512, ES256, ES384, ES512
 	Pkcs11          *ExSignerPkcs11Config          `json:"pkcs11"`           // optional *
 	YubikeyPiv      *ExSignerYubikeyPivConfig      `json:"yubikey_piv"`      // optional *
 	ExternalCommand *ExSignerExternalCommandConfig `json:"external_command"` // optional *
-	// * pkcs11, yubikey_piv and external_command requires one
+	KeyFile         *ExSingerKeyFileConfig         `json:"key_file"`         // optional *
+	// * pkcs11, yubikey_piv, external_command, key_file requires one
 }
 
 type ExSignerPkcs11Config struct {
@@ -131,7 +201,15 @@ type ExSignerYubikeyPivConfig struct {
 	Pin       string `json:"pin"`        // optional, or set env YUBIKEY_PIN
 	PinPolicy string `json:"pin_policy"` // required, none, once or always
 }
+
 type ExSignerExternalCommandConfig struct {
 	Command   string `json:"command"`   // required
 	Parameter string `json:"parameter"` // required
+}
+
+type ExSingerKeyFileConfig struct {
+	Key      string `json:"key"`      // optional *
+	File     string `json:"file"`     // optional *
+	Password string `json:"password"` // optional, for PKCS#8 encrypted private key
+	// * key, file requires one
 }

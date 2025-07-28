@@ -1,7 +1,9 @@
 package constants
 
 const (
-	AlibabaCloudIdaasCliVersion = "0.1.0-preview2"
+	AlibabaCloudIdaasCliVersion = "0.1.0-preview4"
+
+	DefaultAudienceAlibabaCloudIdaas = "alibaba-cloud-idaas-v2"
 
 	DotAliyunDir         = ".aliyun"
 	AlibabaCloudIdaasDir = "alibaba-cloud-idaas"
@@ -18,6 +20,7 @@ const (
 	EnvUnsafeConsolePrint = "ALIBABA_CLOUD_IDAAS_UNSAFE_CONSOLE_PRINT"
 	EnvPkcs11Pin          = "ALIBABA_CLOUD_IDAAS_PKSC11_PIN"
 	EnvYubiKeyPin         = "ALIBABA_CLOUD_IDAAS_YUBIKEY_PIN"
+	EnvPkcs8Password      = "ALIBABA_CLOUD_IDAAS_PKCS8_PASSWORD"
 
 	UrlIdaasProduct                = "https://www.aliyun.com/product/idaas"
 	UrlAlibabaCloudIdaasRepository = "https://github.com/aliyunidaas/alibaba-cloud-idaas"
