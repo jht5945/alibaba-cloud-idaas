@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/qr"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/serve"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/show_signer_public_key"
-	"os"
-	"strings"
 
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/clean_cache"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/execute"
@@ -55,6 +56,10 @@ func innerMain() error {
 			printBanner()
 			printConfigFileAndFeatures()
 			printVerbose(context)
+			if context.Args().First() != "" {
+				utils.Stderr.Fprintf("\n%s\n",
+					utils.Red("[ERROR] Bad sub command: "+context.Args().First(), true))
+			}
 			return nil
 		},
 	}

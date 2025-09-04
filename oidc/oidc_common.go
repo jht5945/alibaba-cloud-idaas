@@ -2,11 +2,12 @@ package oidc
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/constants"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"github.com/pkg/errors"
-	"net/http"
 )
 
 const (
@@ -32,13 +33,16 @@ type FetchTokenCommonOptions struct {
 }
 
 // TokenResponse
+// expires_at - Alibaba Cloud IDaaS Spec
 // specification: RFC6749
 type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int64  `json:"expires_in"`
-	Scope       string `json:"scope"`
-	IdToken     string `json:"id_token"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
+	ExpiresAt    int64  `json:"expires_at"`
+	Scope        string `json:"scope"`
+	IdToken      string `json:"id_token"`
 }
 
 // DeviceCodeResponse

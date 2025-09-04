@@ -2,16 +2,18 @@ package execute
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/alibaba_cloud"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/aws"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/oidc"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/common"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
 	"github.com/urfave/cli/v2"
-	"os"
-	"os/exec"
-	"strings"
 )
 
 var (
@@ -69,7 +71,7 @@ func execute(profile string, showToken, forceNew bool, envRegion string, args []
 	}
 
 	if showToken {
-		_ = common.ShowToken(sts, false, true)
+		_ = common.ShowToken(sts, oidc.FetchDefault, false, true)
 	}
 
 	alibabaCloudSts, ok := sts.(*alibaba_cloud.StsToken)

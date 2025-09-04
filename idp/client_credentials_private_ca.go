@@ -1,30 +1,31 @@
 package idp
 
 import (
+	"os"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/oidc"
 	"github.com/pkg/errors"
-	"os"
 )
 
-func FetchAccessTokenClientCredentialsPrivateCa(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (string, error) {
+func FetchAccessTokenClientCredentialsPrivateCa(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (*oidc.TokenResponse, error) {
 	tokenEndpoint := credentialConfig.TokenEndpoint
 	clientAssertionPrivateCaConfig := credentialConfig.ClientAssertionPrivateCaConfig
 
 	certificate, certificateErr := readCertificate(
 		clientAssertionPrivateCaConfig.Certificate, clientAssertionPrivateCaConfig.CertificateFile)
 	if certificateErr != nil {
-		return "", certificateErr
+		return nil, certificateErr
 	}
 	certificateChain, certificateChainErr := readCertificate(
 		clientAssertionPrivateCaConfig.CertificateChain, clientAssertionPrivateCaConfig.CertificateChainFile)
 	if certificateChainErr != nil {
-		return "", certificateChainErr
+		return nil, certificateChainErr
 	}
 
 	jwtSigner, err := config.NewExJwtSignerFromConfig(clientAssertionPrivateCaConfig.CertificateKeySigner)
 	if err != nil {
-		return "", errors.Wrap(err, "new jwt signer failed")
+		return nil, errors.Wrap(err, "new jwt signer failed")
 	}
 	fetchTokenX509JwtBearerOptions := &oidc.FetchTokenX509JwtBearerOptions{
 		FetchTokenCommonOptions: buildFetchTokenCommonOptions(credentialConfig),

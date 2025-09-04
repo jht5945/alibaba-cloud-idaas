@@ -2,9 +2,11 @@ package fetch_token
 
 import (
 	"fmt"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/alibaba_cloud"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/aws"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/oidc"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -20,6 +22,10 @@ var (
 		Aliases: []string{"f"},
 		Usage:   "Cloud STS format, values aliyuncli(default), ossutilv2",
 	}
+	stringFlagOidcField = &cli.StringFlag{
+		Name:  "oidc-field",
+		Usage: "Fetch OIDC filed (id_token or access_token)",
+	}
 	boolFlagForceNew = &cli.BoolFlag{
 		Name:    "force-new",
 		Aliases: []string{"N"},
@@ -31,6 +37,7 @@ func BuildCommand() *cli.Command {
 	flags := []cli.Flag{
 		stringFlagProfile,
 		stringFlagFormat,
+		stringFlagOidcField,
 		boolFlagForceNew,
 	}
 	return &cli.Command{
@@ -40,36 +47,55 @@ func BuildCommand() *cli.Command {
 		Action: func(context *cli.Context) error {
 			profile := context.String("profile")
 			format := context.String("format")
+			oidcField := context.String("oidc-field")
 			forceNew := context.Bool("force-new")
 
-			return fetchToken(profile, format, forceNew)
+			return fetchToken(profile, format, oidcField, forceNew)
 		},
 	}
 }
 
-func fetchToken(profile, format string, forceNew bool) error {
+func fetchToken(profile, format, oidcField string, forceNew bool) error {
 	options := &cloud.FetchCloudStsOptions{
 		ForceNew: forceNew,
 	}
+	oidcTokenType := oidc.GetOidcTokenType(oidcField)
+	options.FetchOidcTokenType = oidcTokenType
+
 	sts, _, err := cloud.FetchCloudStsFromDefaultConfig(profile, options)
 	if err != nil {
 		return err
 	}
 
-	var stsJson string
-	var stsJsonErr error
+	var stdOutput string
+	var stdOutputErr error
+	printNewLine := true
 
 	if alibabaCloudSts, ok := sts.(*alibaba_cloud.StsToken); ok {
-		stsJson, stsJsonErr = alibabaCloudSts.MarshalWithFormat(format)
+		stdOutput, stdOutputErr = alibabaCloudSts.MarshalWithFormat(format)
 	} else if awsStsToken, ok := sts.(*aws.AwsStsToken); ok {
-		stsJson, stsJsonErr = awsStsToken.Marshal()
+		stdOutput, stdOutputErr = awsStsToken.Marshal()
+	} else if oidcToken, ok := sts.(*oidc.OidcToken); ok {
+		if oidcTokenType == oidc.FetchIdToken {
+			printNewLine = false
+			stdOutput = oidcToken.IdToken
+		} else if oidcTokenType == oidc.FetchAccessToken {
+			printNewLine = false
+			stdOutput = oidcToken.AccessToken
+		} else {
+			stdOutput, stdOutputErr = oidcToken.Marshal()
+		}
 	} else {
 		return fmt.Errorf("unknown cloud STS token type")
 	}
 
-	if stsJsonErr != nil {
-		return stsJsonErr
+	if stdOutputErr != nil {
+		return stdOutputErr
 	}
-	utils.Stdout.Println(stsJson)
+	if printNewLine {
+		utils.Stdout.Println(stdOutput)
+	} else {
+		utils.Stdout.Print(stdOutput)
+	}
 	return nil
 }

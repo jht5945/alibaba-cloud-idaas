@@ -2,15 +2,18 @@ package cloud
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/alibaba_cloud"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/aws"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/oidc"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 type FetchCloudStsOptions struct {
-	ForceNew bool
+	ForceNew           bool
+	FetchOidcTokenType oidc.FetchOidcTokenType
 }
 
 func FetchCloudStsFromDefaultConfig(profile string, options *FetchCloudStsOptions) (any, *config.CloudStsConfig, error) {
@@ -28,6 +31,7 @@ func FetchCloudStsFromDefaultConfig(profile string, options *FetchCloudStsOption
 func FetchCloudSts(profile string, cloudStsConfig *config.CloudStsConfig, options *FetchCloudStsOptions) (any, error) {
 	hasAlibabaCloud := cloudStsConfig.AlibabaCloud != nil
 	hasAws := cloudStsConfig.Aws != nil
+	hasOidcToken := cloudStsConfig.OidcToken != nil
 
 	var clouds []string
 	if hasAlibabaCloud {
@@ -35,6 +39,9 @@ func FetchCloudSts(profile string, cloudStsConfig *config.CloudStsConfig, option
 	}
 	if hasAws {
 		clouds = append(clouds, "Aws")
+	}
+	if hasOidcToken {
+		clouds = append(clouds, "OidcToken")
 	}
 
 	if len(clouds) > 1 {
@@ -47,12 +54,19 @@ func FetchCloudSts(profile string, cloudStsConfig *config.CloudStsConfig, option
 			ForceNew: options.ForceNew,
 		}
 		return alibaba_cloud.FetchStsWithOidcConfig(profile, cloudStsConfig.AlibabaCloud, stsOptions)
-	} else if hasAws {
+	}
+	if hasAws {
 		awsStsOptions := &aws.FetchAwsStsWithOidcConfigOptions{
 			ForceNew: options.ForceNew,
 		}
 		return aws.FetchAwsStsWithOidcConfig(profile, cloudStsConfig.Aws, awsStsOptions)
-	} else {
-		return nil, errors.New("no clouds is set")
 	}
+	if hasOidcToken {
+		oidcTokenConfigOptions := &oidc.FetchOidcTokenConfigOptions{
+			ForceNew:       options.ForceNew,
+			FetchTokenType: options.FetchOidcTokenType,
+		}
+		return oidc.FetchOidcToken(profile, cloudStsConfig.OidcToken, oidcTokenConfigOptions)
+	}
+	return nil, errors.New("no cloud provider is set")
 }

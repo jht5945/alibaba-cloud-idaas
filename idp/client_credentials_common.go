@@ -16,13 +16,13 @@ func buildFetchTokenCommonOptions(credentialConfig *config.OidcTokenProviderClie
 	}
 }
 
-func parseFetchAccessToken(tokenResponse *oidc.TokenResponse, errorResponse *oidc.ErrorResponse, err error) (string, error) {
+func parseFetchAccessToken(tokenResponse *oidc.TokenResponse, errorResponse *oidc.ErrorResponse, err error) (*oidc.TokenResponse, error) {
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if errorResponse != nil {
-		return "", errors.Errorf("fetch token failed, error: %s, description: %s, requestId: %s",
+		return nil, errors.Errorf("fetch token failed, error: %s, description: %s, requestId: %s",
 			errorResponse.Error, errorResponse.ErrorDescription, errorResponse.RequestId)
 	}
-	return tokenResponse.AccessToken, nil
+	return tokenResponse, nil
 }

@@ -2,11 +2,12 @@ package show_profile
 
 import (
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"github.com/urfave/cli/v2"
-	"sort"
-	"strings"
 )
 
 var (
@@ -64,6 +65,7 @@ func showProfiles(profileFilter string, color bool) error {
 
 		showAlibabaCloud(color, profile)
 		showAws(color, profile)
+		showOidc(color, profile)
 
 		println()
 	}
@@ -109,6 +111,13 @@ func showAws(color bool, profile *config.CloudStsConfig) {
 
 		oidcTokenProvider := aws.OidcTokenProvider
 		showOidcTokenProvider(color, oidcTokenProvider)
+	}
+}
+
+func showOidc(color bool, profile *config.CloudStsConfig) {
+	if profile.OidcToken != nil {
+		oidcToken := profile.OidcToken
+		showOidcTokenProvider(color, oidcToken)
 	}
 }
 

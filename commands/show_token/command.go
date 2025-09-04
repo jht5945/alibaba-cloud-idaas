@@ -2,6 +2,7 @@ package show_token
 
 import (
 	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/oidc"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/commands/common"
 	"github.com/urfave/cli/v2"
 )
@@ -11,6 +12,10 @@ var (
 		Name:    "profile",
 		Aliases: []string{"p"},
 		Usage:   "IDaaS Profile",
+	}
+	stringFlagOidcField = &cli.StringFlag{
+		Name:  "oidc-field",
+		Usage: "Fetch OIDC filed (id_token or access_token)",
 	}
 	boolFlagNoColor = &cli.BoolFlag{
 		Name:  "no-color",
@@ -26,6 +31,7 @@ var (
 func BuildCommand() *cli.Command {
 	flags := []cli.Flag{
 		stringFlagProfile,
+		stringFlagOidcField,
 		boolFlagNoColor,
 		boolFlagForceNew,
 	}
@@ -35,20 +41,25 @@ func BuildCommand() *cli.Command {
 		Flags: flags,
 		Action: func(context *cli.Context) error {
 			profile := context.String("profile")
+			oidcField := context.String("oidc-field")
 			color := !context.Bool("no-color")
 			forceNew := context.Bool("force-new")
-			return fetchAndShowToken(profile, forceNew, color)
+			return fetchAndShowToken(profile, oidcField, forceNew, color)
 		},
 	}
 }
 
-func fetchAndShowToken(profile string, forceNew bool, color bool) error {
+func fetchAndShowToken(profile, oidcField string, forceNew bool, color bool) error {
 	options := &cloud.FetchCloudStsOptions{
 		ForceNew: forceNew,
 	}
+	oidcTokenType := oidc.GetOidcTokenType(oidcField)
+	options.FetchOidcTokenType = oidcTokenType
+
 	sts, _, err := cloud.FetchCloudStsFromDefaultConfig(profile, options)
 	if err != nil {
 		return err
 	}
-	return common.ShowToken(sts, true, color)
+
+	return common.ShowToken(sts, oidcTokenType, true, color)
 }

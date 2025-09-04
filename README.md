@@ -60,7 +60,6 @@ Follow the specification: RFC 8628: OAuth 2.0 Device Authorization Grant.
           "device_code": {
             "issuer": "https://eiam-api-cn-hangzhou.aliyuncs.com/v2/idaas_wrwsx*********************/app_m7jks3********************/oidc",
             "client_id": "app_m7jks3********************",
-            "client_secret": "CSFG*****************************************e",
             "auto_open_url": true,
             "show_qr_code": true,
             "small_qr_code": true
@@ -164,6 +163,53 @@ Follow the specification: RFC 8628: OAuth 2.0 Device Authorization Grant.
 }
 ```
 
+### Fetch AWS STS Token
+
+```json
+{
+  "version": "1",
+  "profile": {
+    "aws1": {
+      "aws_sts": {
+        "region": "us-east-2",
+        "role_arn": "arn:aws:iam::5418********:role/hatter-role-test",
+        "oidc_token_provider": {
+          "device_code": {
+            "issuer": "https://eiam-api-cn-hangzhou.aliyuncs.com/v2/idaas_wrwsx*********************/app_m7jks3********************/oidc",
+            "client_id": "app_m7jks3********************",
+            "auto_open_url": true,
+            "show_qr_code": true,
+            "small_qr_code": true
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Fetch OIDC Token
+
+```json
+{
+  "version": "1",
+  "profile": {
+    "oidc1": {
+      "oidc_token": {
+        "device_code": {
+          "issuer": "https://eiam-api-cn-hangzhou.aliyuncs.com/v2/idaas_wrwsx*********************/app_m7jks3********************/oidc",
+          "client_id": "app_m7jks3********************",
+          "auto_open_url": true,
+          "show_qr_code": true,
+          "small_qr_code": true
+        }
+      }
+    }
+  }
+}
+```
+
+
 ## Run Commands
 
 Display help message `alibaba-cloud-idaas --help`.
@@ -184,8 +230,32 @@ Run command: `alibaba-cloud-idaas fetch-token --profile aliyun2`, outputs:
   "access_key_id": "STS.NVkY*********************",
   "access_key_secret": "CZPLzX**************************************",
   "sts_token": "CAIS0AJ1q6Ft5B2yfSjIr5XeEs3mm551gqHaMU7cjms0YeFeioDC************************",
-  "expiration": "2025-05-22T02:29:05Z"}
+  "expiration": "2025-05-22T02:29:05Z"
+}
 ```
+
+Run command: `alibaba-cloud-idaas fetch-token --profile aws1`, outputs:
+```json
+{
+  "Version": 1,
+  "AccessKeyId": "ASIAX***************",
+  "SecretAccessKey": "05U0bVZ*********************************",
+  "SessionToken": "IQoJb3JpZ2luX2VjEL7//////////wEaCXVzLWVhc3Qt****************************",
+  "Expiration": "2025-09-02T07:20:46Z"
+}
+```
+
+Run command: `alibaba-cloud-idaas fetch-token --profile oidc1`, outputs:
+```json
+{
+  "id_token": "eyJraWQiOi*******************",
+  "token_type": "Bearer",
+  "access_token": "ATM4SoVDrDYt5***************************",
+  "expires_in": 1200,
+  "expires_at": 1756795270
+}
+```
+Add parameter `--oidc-field id_token` or `--oidc-field access_token`, only fetch ID Token or Access Token.
 
 Config Alibaba Cloud cli, file: `~/.aliyun/config.json`
 ```json
@@ -215,6 +285,14 @@ Access Key ID     : STS.NVkY*********************
 Access Key Secret : CZPLzX**************************************
 Security Token    : CAIS0AJ1q6Ft5B2yfSjIr5XeEs3mm551gqHaMU7cjms0YeFeioDC************************
 Expiration        : 2025-05-22 09:57:11 +0800 CST   [Expires in 34 minute(s)]
+```
+
+Run command: `alibaba-cloud-idaas show-token --profile aws1`, outputs:
+```shell
+Access Key ID     : ASIAX***************
+Secret Access Key : 05U0bVZ*********************************
+Session Token     : IQoJb3JpZ2luX2VjEL7//////////wEaCXVzLWVhc3Qt****************************
+Expiration        : 2025-09-02 15:20:46 +0800 CST   [Expires in 49 minute(s)]
 ```
 
 ### Via aliyun-cli

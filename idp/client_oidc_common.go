@@ -4,13 +4,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/constants"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/oidc"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"github.com/pkg/errors"
-	"strings"
-	"time"
 )
 
 type FetchOidcTokenOptions struct {
@@ -45,6 +47,26 @@ func FetchOidcToken(profile string, oidcTokenProviderConfig *config.OidcTokenPro
 	return jwt, err
 }
 
+func FetchTokenResponse(oidcTokenProviderConfig *config.OidcTokenProviderConfig, options *FetchOidcTokenOptions) (*oidc.TokenResponse, error) {
+	hasOidcTokenProviderDeviceCode := oidcTokenProviderConfig.OidcTokenProviderDeviceCode != nil
+	hasOidcTokenProviderClientCredentials := oidcTokenProviderConfig.OidcTokenProviderClientCredentials != nil
+
+	if hasOidcTokenProviderDeviceCode && hasOidcTokenProviderClientCredentials {
+		return nil, errors.New(
+			"OidcTokenProviderDeviceCode and OidcTokenProviderClientCredentials cannot both be set")
+	}
+	if hasOidcTokenProviderDeviceCode {
+		tokenResponse, fetchOidcTokenErr := FetchIdTokenDeviceCode(oidcTokenProviderConfig.OidcTokenProviderDeviceCode, options)
+		return tokenResponse, fetchOidcTokenErr
+	} else if hasOidcTokenProviderClientCredentials {
+		tokenResponse, fetchOidcTokenErr := FetchAccessTokenClientCredentials(oidcTokenProviderConfig.OidcTokenProviderClientCredentials)
+		return tokenResponse, fetchOidcTokenErr
+	} else {
+		return nil, errors.New(
+			"OidcTokenProviderDeviceCode or OidcTokenProviderClientCredentials must set at least one")
+	}
+}
+
 func fetchJwt(oidcTokenProviderConfig *config.OidcTokenProviderConfig, options *FetchOidcTokenOptions) (int, string, error) {
 	hasOidcTokenProviderDeviceCode := oidcTokenProviderConfig.OidcTokenProviderDeviceCode != nil
 	hasOidcTokenProviderClientCredentials := oidcTokenProviderConfig.OidcTokenProviderClientCredentials != nil
@@ -54,11 +76,18 @@ func fetchJwt(oidcTokenProviderConfig *config.OidcTokenProviderConfig, options *
 			"OidcTokenProviderDeviceCode and OidcTokenProviderClientCredentials cannot both be set")
 	}
 	var oidcToken string
+	var tokenResponse *oidc.TokenResponse
 	var fetchOidcTokenErr error
 	if hasOidcTokenProviderDeviceCode {
-		oidcToken, fetchOidcTokenErr = FetchIdTokenDeviceCode(oidcTokenProviderConfig.OidcTokenProviderDeviceCode, options)
+		tokenResponse, fetchOidcTokenErr = FetchIdTokenDeviceCode(oidcTokenProviderConfig.OidcTokenProviderDeviceCode, options)
+		if tokenResponse != nil {
+			oidcToken = tokenResponse.IdToken
+		}
 	} else if hasOidcTokenProviderClientCredentials {
-		oidcToken, fetchOidcTokenErr = FetchAccessTokenClientCredentials(oidcTokenProviderConfig.OidcTokenProviderClientCredentials)
+		tokenResponse, fetchOidcTokenErr = FetchAccessTokenClientCredentials(oidcTokenProviderConfig.OidcTokenProviderClientCredentials)
+		if tokenResponse != nil {
+			oidcToken = tokenResponse.AccessToken
+		}
 	} else {
 		return 600, "", errors.New(
 			"OidcTokenProviderDeviceCode or OidcTokenProviderClientCredentials must set at least one")

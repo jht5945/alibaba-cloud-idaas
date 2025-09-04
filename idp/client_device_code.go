@@ -7,7 +7,7 @@ import (
 )
 
 func FetchIdTokenDeviceCode(oidcTokenProviderDeviceCodeConfig *config.OidcTokenProviderDeviceCodeConfig,
-	fetchOptions *FetchOidcTokenOptions) (string, error) {
+	fetchOptions *FetchOidcTokenOptions) (*oidc.TokenResponse, error) {
 	issuer := oidcTokenProviderDeviceCodeConfig.Issuer
 	options := &oidc.FetchDeviceCodeFlowOptions{
 		ClientId:     oidcTokenProviderDeviceCodeConfig.ClientId,
@@ -19,7 +19,7 @@ func FetchIdTokenDeviceCode(oidcTokenProviderDeviceCodeConfig *config.OidcTokenP
 	}
 	tokenResponse, err := oidc.FetchTokenViaDeviceCodeFlow(issuer, options)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed fetch id token via device code, issuer: %s", issuer)
+		return nil, errors.Wrapf(err, "failed fetch id token via device code, issuer: %s", issuer)
 	}
-	return tokenResponse.IdToken, nil
+	return tokenResponse, nil
 }

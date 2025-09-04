@@ -1,20 +1,22 @@
 package idp
 
 import (
-	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
-	"github.com/pkg/errors"
 	"strings"
+
+	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/oidc"
+	"github.com/pkg/errors"
 )
 
-func FetchAccessTokenClientCredentials(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (string, error) {
+func FetchAccessTokenClientCredentials(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (*oidc.TokenResponse, error) {
 	if credentialConfig == nil {
-		return "", errors.New("oidcTokenProviderClientCredentialsConfig is nil")
+		return nil, errors.New("oidcTokenProviderClientCredentialsConfig is nil")
 	}
 	if credentialConfig.TokenEndpoint == "" {
-		return "", errors.New("oidcTokenProviderClientCredentialsConfig.TokenEndpoint is empty")
+		return nil, errors.New("oidcTokenProviderClientCredentialsConfig.TokenEndpoint is empty")
 	}
 	if credentialConfig.ClientId == "" {
-		return "", errors.New("oidcTokenProviderClientCredentialsConfig.ClientId is empty")
+		return nil, errors.New("oidcTokenProviderClientCredentialsConfig.ClientId is empty")
 	}
 
 	hasClientSecret := credentialConfig.ClientSecret != ""
@@ -41,7 +43,7 @@ func FetchAccessTokenClientCredentials(credentialConfig *config.OidcTokenProvide
 	}
 
 	if len(clientAuthMethods) > 1 {
-		return "", errors.Errorf("multiple client auth methods found: %s", strings.Join(clientAuthMethods, ", "))
+		return nil, errors.Errorf("multiple client auth methods found: %s", strings.Join(clientAuthMethods, ", "))
 	}
 
 	if hasClientSecret {
@@ -55,6 +57,6 @@ func FetchAccessTokenClientCredentials(credentialConfig *config.OidcTokenProvide
 	} else if hasClientAssertionOidcToken {
 		return FetchAccessTokenClientCredentialsOidcToken(credentialConfig)
 	} else {
-		return "", errors.New("client auth method must set one")
+		return nil, errors.New("client auth method must set one")
 	}
 }

@@ -6,11 +6,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func FetchAccessTokenClientCredentialsRfc7523(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (string, error) {
+func FetchAccessTokenClientCredentialsRfc7523(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (*oidc.TokenResponse, error) {
 	tokenEndpoint := credentialConfig.TokenEndpoint
 	jwtSigner, err := config.NewExJwtSignerFromConfig(credentialConfig.ClientAssertionSinger)
 	if err != nil {
-		return "", errors.Wrap(err, "new jwt signer failed")
+		return nil, errors.Wrap(err, "new jwt signer failed")
 	}
 	fetchTokenRfc7523Options := &oidc.FetchTokenRfc7523Options{
 		FetchTokenCommonOptions: buildFetchTokenCommonOptions(credentialConfig),

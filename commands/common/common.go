@@ -2,14 +2,16 @@ package common
 
 import (
 	"fmt"
-	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/alibaba_cloud"
-	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/aws"
-	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"strings"
 	"time"
+
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/alibaba_cloud"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/aws"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/cloud/oidc"
+	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 )
 
-func ShowToken(sts any, stdout, color bool) error {
+func ShowToken(sts any, oidcTokenType oidc.FetchOidcTokenType, stdout, color bool) error {
 	alibabaCloudSts, ok := sts.(*alibaba_cloud.StsToken)
 	if ok {
 		return showStsToken(alibabaCloudSts, stdout, color)
@@ -17,6 +19,10 @@ func ShowToken(sts any, stdout, color bool) error {
 	awsStsToken, ok := sts.(*aws.AwsStsToken)
 	if ok {
 		return showAwsStsToken(awsStsToken, stdout, color)
+	}
+	oidcToken, ok := sts.(*oidc.OidcToken)
+	if ok {
+		return showOidcToken(oidcToken, oidcTokenType, stdout, color)
 	}
 
 	return fmt.Errorf("unknown cloud STS token type")
@@ -40,6 +46,35 @@ func showAwsStsToken(awsStsToken *aws.AwsStsToken, stdout, color bool) error {
 	printRow("Secret Access Key", awsStsToken.SecretAccessKey, stdout, color)
 	printRow("Session Token", awsStsToken.SessionToken, stdout, color)
 	printRowExpiration(&awsStsToken.Expiration, stdout, color)
+	return nil
+}
+
+func showOidcToken(oidcToken *oidc.OidcToken, oidcTokenType oidc.FetchOidcTokenType, stdout, color bool) error {
+	printIdToken := oidcToken.IdToken != "" && oidcTokenType.IsFetchIdToken()
+	printAccessToken := oidcToken.AccessToken != "" && oidcTokenType.IsFetchAccessToken()
+
+	if printIdToken {
+		printRow("ID Token", oidcToken.IdToken, stdout, color)
+		idTokenPayload, err := oidc.ParseIdTokenPayload(oidcToken.IdToken)
+		if err == nil {
+			expiresAt := time.Unix(idTokenPayload.Exp, 0)
+			printRowExpiration(&expiresAt, stdout, color)
+		}
+	}
+	if printIdToken && printAccessToken {
+		printStdio("\n", stdout)
+	}
+	if printAccessToken {
+		printRow("Access Token Type", oidcToken.TokenType, stdout, color)
+		printRow("Access Token", oidcToken.AccessToken, stdout, color)
+		if oidcToken.ExpiresAt > 0 {
+			expiresAt := time.Unix(oidcToken.ExpiresAt, 0)
+			printRowExpiration(&expiresAt, stdout, color)
+		}
+	}
+	if oidcToken.RefreshToken != "" {
+		printRow("Refresh Token", oidcToken.RefreshToken, stdout, color)
+	}
 	return nil
 }
 

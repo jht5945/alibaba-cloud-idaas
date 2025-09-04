@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 )
@@ -75,10 +76,11 @@ func TryParseProfileFromInput(profile string) (string, *CloudStsConfig) {
 }
 
 type CloudStsConfig struct {
-	AlibabaCloud *AlibabaCloudStsConfig `json:"alibaba_cloud_sts"` // optional, AlibabaCloud or Aws one required
-	Aws          *AwsCloudStsConfig     `json:"aws_sts"`           // optional, see AlibabaCloud
-	Environments []string               `json:"environments"`      // optional, environments for execute
-	Comment      string                 `json:"comment"`           // optional
+	AlibabaCloud *AlibabaCloudStsConfig   `json:"alibaba_cloud_sts"` // optional, AlibabaCloud, Aws or OidcToken one required
+	Aws          *AwsCloudStsConfig       `json:"aws_sts"`           // optional, see AlibabaCloud
+	OidcToken    *OidcTokenProviderConfig `json:"oidc_token"`        // optional, AlibabaCloud
+	Environments []string                 `json:"environments"`      // optional, environments for execute
+	Comment      string                   `json:"comment"`           // optional
 }
 
 type AlibabaCloudStsConfig struct {

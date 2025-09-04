@@ -4,14 +4,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+	"time"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/idaaslog"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/oidc"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"github.com/pkg/errors"
-	"net/http"
-	"net/url"
-	"time"
 )
 
 const (
@@ -20,11 +21,11 @@ const (
 	Pkcs7ProviderAzure        = "azure"
 )
 
-func FetchAccessTokenClientCredentialsPkcs7(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (string, error) {
+func FetchAccessTokenClientCredentialsPkcs7(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (*oidc.TokenResponse, error) {
 	tokenEndpoint := credentialConfig.TokenEndpoint
 	pkcs7, err := fetchPkcs7(credentialConfig)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	fetchTokenPkcs7BearerOptions := &oidc.FetchTokenPkcs7BearerOptions{
 		FetchTokenCommonOptions: buildFetchTokenCommonOptions(credentialConfig),

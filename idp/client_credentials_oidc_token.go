@@ -2,13 +2,14 @@ package idp
 
 import (
 	"fmt"
+	"net/url"
+	"os"
+
 	"github.com/aliyunidaas/alibaba-cloud-idaas/config"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/constants"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/oidc"
 	"github.com/aliyunidaas/alibaba-cloud-idaas/utils"
 	"github.com/pkg/errors"
-	"net/url"
-	"os"
 )
 
 const (
@@ -16,11 +17,11 @@ const (
 	OidcTokenProviderCustom = "custom"
 )
 
-func FetchAccessTokenClientCredentialsOidcToken(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (string, error) {
+func FetchAccessTokenClientCredentialsOidcToken(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (*oidc.TokenResponse, error) {
 	tokenEndpoint := credentialConfig.TokenEndpoint
 	idToken, err := fetchOidcToken(credentialConfig)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	fetchTokenIdTokenBearerOptions := &oidc.FetchTokenIdTokenBearerOptions{
 		FetchTokenCommonOptions: buildFetchTokenCommonOptions(credentialConfig),

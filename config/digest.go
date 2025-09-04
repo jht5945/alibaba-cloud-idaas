@@ -12,7 +12,7 @@ func (c *CloudStsConfig) Digest() string {
 		return ""
 	}
 	// Comment do not effect digest(cache)
-	return digest(c.AlibabaCloud.Digest(), c.Aws.Digest())
+	return digest(c.AlibabaCloud.Digest(), c.Aws.Digest(), c.OidcToken.Digest())
 }
 
 func (c *AlibabaCloudStsConfig) Digest() string {

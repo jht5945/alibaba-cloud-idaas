@@ -5,7 +5,7 @@ import (
 	"github.com/aliyunidaas/alibaba-cloud-idaas/oidc"
 )
 
-func FetchAccessTokenClientCredentialsClientIdSecret(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (string, error) {
+func FetchAccessTokenClientCredentialsClientIdSecret(credentialConfig *config.OidcTokenProviderClientCredentialsConfig) (*oidc.TokenResponse, error) {
 	tokenEndpoint := credentialConfig.TokenEndpoint
 	fetchTokenOptions := &oidc.FetchTokenOptions{
 		ClientId:     credentialConfig.ClientId,
